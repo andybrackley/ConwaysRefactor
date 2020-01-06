@@ -17,6 +17,16 @@ let createWorldFromStringArray (lines: string[]) =
 
     world
 
+let getWorldAsText(world: bool [][]) =
+    [
+        for a in [0 .. world.Length - 1] do
+            let mutable line = ""
+            for b in [0 .. world.[0].Length-1] do
+                if world.[a].[b] then line <- line + "*" else line <- line + " "
+
+            yield line
+    ]
+
 let createWorldFromString (world: string) =
     let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
     createWorldFromStringArray tokened
@@ -51,10 +61,8 @@ let main argv =
 
     evolve world
 
-    for a in [0 .. world.Length - 1] do
-        let mutable line = ""
-        for b in [0 .. world.[0].Length-1] do
-            if world.[a].[b] then line <- line + "*" else line <- line + " "
-        printfn "%s" line
+    getWorldAsText world
+        |> List.iter(fun l -> printfn "%s" l)
+
             
     42 // return an integer exit code

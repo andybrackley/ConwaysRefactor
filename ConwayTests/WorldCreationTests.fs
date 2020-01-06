@@ -29,3 +29,16 @@ let ``Given the sample input the world is created as expected`` () =
     ]
 
     CollectionAssert.AreEquivalent(expected, SampleData.world)
+
+[<Test>]
+let ``world can be retrieved as string array``() = 
+    let expected = [
+       "     "
+       "  *  "
+       " *** "
+       "  *  "
+       "     "
+    ]
+
+    let dump = Program.getWorldAsText SampleData.world
+    CollectionAssert.AreEquivalent(expected, dump)
