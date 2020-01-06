@@ -4,28 +4,25 @@
 open System
 
 let createWorldFromStringArray (lines: string[]) =
-    let world : bool array array = Array.zeroCreate lines.Length 
-    for x in [0 .. lines.Length-1] do
-        world.[x] <- Array.zeroCreate lines.[x].Length
-        let mutable c = 0
-        while c < lines.[x].Length do
-            if lines.[x].[c] = '_' then
-                world.[x].[c] <- false
-            elif lines.[x].[c] = '*' then
-                world.[x].[c] <- true
-            c <- c + 1
+    // Assume only valid inputs for the time being.
+    let charAsCellType = function 
+    | '*' -> true
+    | _ -> false
 
-    world
+    lines 
+    |> Array.map(
+        fun line -> 
+            line.ToCharArray()
+                |> Array.map charAsCellType)
+
 
 let getWorldAsText(world: bool [][]) =
-    [
-        for a in [0 .. world.Length - 1] do
-            let mutable line = ""
-            for b in [0 .. world.[0].Length-1] do
-                if world.[a].[b] then line <- line + "*" else line <- line + " "
+    let cellAsString = function
+    | true -> "*"
+    | false -> " "
 
-            yield line
-    ]
+    world |> Array.map(
+        fun rows  -> rows |> Array.fold(fun str cell -> str + cellAsString cell) "")
 
 let createWorldFromString (world: string) =
     let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
@@ -62,7 +59,7 @@ let main argv =
     evolve world
 
     getWorldAsText world
-        |> List.iter(fun l -> printfn "%s" l)
+        |> Array.iter(fun l -> printfn "%s" l)
 
             
     42 // return an integer exit code
