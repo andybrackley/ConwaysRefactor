@@ -3,6 +3,24 @@
 
 open System
 
+let createWorldFromStringArray (lines: string[]) =
+    let world : bool array array = Array.zeroCreate lines.Length 
+    for x in [0 .. lines.Length-1] do
+        world.[x] <- Array.zeroCreate lines.[x].Length
+        let mutable c = 0
+        while c < lines.[x].Length do
+            if lines.[x].[c] = '_' then
+                world.[x].[c] <- false
+            elif lines.[x].[c] = '*' then
+                world.[x].[c] <- true
+            c <- c + 1
+
+    world
+
+let createWorldFromString (world: string) =
+    let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
+    createWorldFromStringArray tokened
+
 let evolve (world : bool array array) : unit = 
     let mutable neighbours = 0
     let rows = world.Length
@@ -29,22 +47,11 @@ let evolve (world : bool array array) : unit =
 let main argv =
     let input = System.IO.StreamReader("sample_input.txt")
     let all_text = input.ReadToEnd()
-    let lines = all_text.Split([|'\r'; '\n'|])
-
-    let world : bool array array = Array.zeroCreate lines.Length 
-    for x in [0 .. lines.Length-1] do
-        world.[x] <- Array.zeroCreate lines.[x].Length
-        let mutable c = 0
-        while c < lines.[x].Length do
-            if lines.[x].[c] = '_' then
-                world.[x].[c] <- false
-            elif lines.[x].[c] = '*' then
-                world.[x].[c] <- true
-            c <- c + 1
+    let world = createWorldFromString all_text
 
     evolve world
 
-    for a in [0 .. world.Length] do
+    for a in [0 .. world.Length - 1] do
         let mutable line = ""
         for b in [0 .. world.[0].Length-1] do
             if world.[a].[b] then line <- line + "*" else line <- line + " "
