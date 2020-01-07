@@ -16,7 +16,7 @@ module WorldEvolveTests =
          [ false; false; false; false; false; ]
       ]
 
-      CollectionAssert.AreEquivalent(expected, world)
+      CollectionAssert.AreEquivalent(expected, evolved)
 
    [<Test>]
    let ``retrieving coordinates of neighbours gives expected results``() =
@@ -78,4 +78,3 @@ module WorldEvolveTests =
    [<TestCase(4, ExpectedResult = false)>]
    let ``given a dead current state and neighbour count newState is correct``(neighbours) =
       Generations.newState false neighbours
-
