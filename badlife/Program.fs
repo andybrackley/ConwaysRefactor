@@ -3,18 +3,19 @@
 
 open System
 
+type CellState = Alive | Dead
 type Coordinates = { x: int; y: int }
 
 module World = 
     let createFromStringArray (lines: string[]) =
         // Assume only valid inputs for the time being.
-        let charAsCellType = function | '*' -> true | _ -> false
+        let charAsCellType = function | '*' -> Alive | _ -> Dead
         lines |> Array.map(fun line -> line.ToCharArray() |> Array.map charAsCellType)
 
-    let getAsText(world: bool [][]) =
+    let getAsText(world: CellState [][]) =
         let cellAsString = function
-        | true -> "*"
-        | false -> " "
+        | Alive -> "*"
+        | Dead -> " "
 
         world |> Array.map(
             fun rows  -> rows |> Array.fold(fun str cell -> str + cellAsString cell) "")
@@ -23,7 +24,7 @@ module World =
         let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
         createFromStringArray tokened
 
-    let copyAndUpdateWorld (world : bool[][]) coord state = 
+    let copyAndUpdateWorld (world : CellState[][]) coord state = 
         let getCellState cellCoord cellValue = if cellCoord = coord then state else cellValue
 
         world 
@@ -31,6 +32,8 @@ module World =
                 row |> Array.mapi(fun colIndex cell -> getCellState {x = rowIndex; y = colIndex} cell ))
 
 module Generations = 
+    let isCellAlive = function | Alive -> true | Dead -> false
+
     let neighbourOffsets = [
         {x = -1; y = -1 }; { x = -1; y = 0 }; { x = -1; y = 1 }
         {x = 0; y = -1 }; { x = 0; y = 1 }
@@ -50,21 +53,21 @@ module Generations =
         neighbourOffsets
         |> List.map (fun coord -> { x = current.x + coord.x; y = current.y + coord.y } )
 
-    let getAliveNeighbourCount (world: bool[][]) height width currentCoord =
+    let getAliveNeighbourCount (world: CellState[][]) height width currentCoord =
         getNeighbourCoords currentCoord
         |> List.map (fun c -> sanitizeCoordinate c height width)
         |> List.distinct
         |> List.map(fun coord -> world.[coord.x].[coord.y])
-        |> List.filter(fun cell -> cell)
+        |> List.filter isCellAlive
         |> List.sumBy(fun _ -> + 1)
 
     let newState state neighbours = 
         match neighbours with
-        | 3 -> true
+        | 3 -> Alive
         | 2 -> state
-        | _ -> false
+        | _ -> Dead
 
-    let evolve (world : bool array array) = 
+    let evolve (world : CellState[][]) = 
         let rows = world.Length
         let cols = world.[0].Length
 
@@ -75,7 +78,7 @@ module Generations =
         // I've maintained consistancy with the current implementation though which makes it slightly more complicated
         // as I have to use a fold and recreate the grid each time an update occurs
 
-        let processCell (world: bool[][]) currentCoord neighbourTally =
+        let processCell (world: CellState[][]) currentCoord neighbourTally =
             let currentState = world.[currentCoord.x].[currentCoord.y]
             let neighbourCount = getAliveNeighbourCount world rows cols currentCoord
             let totalNeighbours = neighbourCount + neighbourTally

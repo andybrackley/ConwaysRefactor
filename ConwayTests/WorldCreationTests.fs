@@ -7,11 +7,11 @@ module WorldCreation =
     [<Test>]
     let ``Given the sample input the world is created as expected`` () =
         let expected = [
-            [ false; false; false; false; false ]
-            [ false; false; true; false; false ]
-            [ false; true; true; true; false ]
-            [ false; false; true; false; false ]
-            [ false; false; false; false; false ]
+            [ Dead; Dead; Dead; Dead; Dead ]
+            [ Dead; Dead; Alive; Dead; Dead ]
+            [ Dead; Alive; Alive; Alive; Dead ]
+            [ Dead; Dead; Alive; Dead; Dead ]
+            [ Dead; Dead; Dead; Dead; Dead ]
         ]
 
         CollectionAssert.AreEquivalent(expected, SampleData.world())
@@ -35,13 +35,13 @@ module WorldCreation =
         let world = SampleData.world()
 
         let expected = [
-            [ false; false; false; false; true ]
-            [ false; false; true; false; false ]
-            [ false; true; true; true; false ]
-            [ false; false; true; false; false ]
-            [ false; false; false; false; false ]
+            [ Dead; Dead; Dead; Dead; Alive ]
+            [ Dead; Dead; Alive; Dead; Dead ]
+            [ Dead; Alive; Alive; Alive; Dead ]
+            [ Dead; Dead; Alive; Dead; Dead ]
+            [ Dead; Dead; Dead; Dead; Dead ]
         ]
 
-        let newWorld = World.copyAndUpdateWorld world { x = 0; y = 4; } true
+        let newWorld = World.copyAndUpdateWorld world { x = 0; y = 4; } Alive
         CollectionAssert.AreEquivalent(expected, newWorld)
 

@@ -9,11 +9,11 @@ module WorldEvolveTests =
       let world = SampleData.world()
       let evolved = Program.Generations.evolve world
       let expected = [
-         [ false; false; false; true; false; ]
-         [ false; false; false; false; false; ]
-         [ false; false; false; false; false; ]
-         [ false; false; false; false; false; ]
-         [ false; false; false; false; false; ]
+         [ Dead; Dead; Dead; Alive; Dead; ]
+         [ Dead; Dead; Dead; Dead; Dead; ]
+         [ Dead; Dead; Dead; Dead; Dead; ]
+         [ Dead; Dead; Dead; Dead; Dead; ]
+         [ Dead; Dead; Dead; Dead; Dead; ]
       ]
 
       CollectionAssert.AreEquivalent(expected, evolved)
@@ -70,11 +70,13 @@ module WorldEvolveTests =
    [<TestCase(3, ExpectedResult = true)>]
    [<TestCase(4, ExpectedResult = false)>]
    let ``given a live current state and neighbour count newState is correct``(neighbours) =
-      Generations.newState true neighbours
+      Generations.newState Alive neighbours
+      |> Generations.isCellAlive
 
    [<TestCase(1, ExpectedResult = false)>]
    [<TestCase(2, ExpectedResult = false)>]
    [<TestCase(3, ExpectedResult = true)>]
    [<TestCase(4, ExpectedResult = false)>]
    let ``given a dead current state and neighbour count newState is correct``(neighbours) =
-      Generations.newState false neighbours
+      Generations.newState Dead neighbours
+      |> Generations.isCellAlive
