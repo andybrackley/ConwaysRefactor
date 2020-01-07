@@ -58,6 +58,12 @@ module Generations =
         |> List.filter(fun cell -> cell)
         |> List.sumBy(fun _ -> + 1)
 
+    let newState state neighbours = 
+        if (state && neighbours < 2) then false
+        else if (state && neighbours = 2 || neighbours = 3) then true
+        else if (state && neighbours > 3) then false
+        else if (not state && neighbours = 3) then true 
+        else state
 
     let evolve (world : bool array array) : unit = 
         let mutable neighbours = 0
@@ -71,10 +77,8 @@ module Generations =
 
                neighbours <- neighbours + neighbourCount
 
-               if (world.[g].[k]&& neighbours < 2) then world.[g].[k] <- false
-               if (world.[g].[k] && neighbours = 2 || neighbours = 3) then world.[g].[k] <- true
-               if (world.[g].[k] && neighbours > 3) then world.[g].[k] <- false
-               if (not world.[g].[k] && neighbours = 3) then world.[g].[k] <- true 
+               let newState = newState world.[currentCoord.x].[currentCoord.y] neighbours 
+               world.[g].[k] <- newState
 
 [<EntryPoint>]
 let main argv =

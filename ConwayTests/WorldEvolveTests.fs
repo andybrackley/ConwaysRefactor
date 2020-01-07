@@ -65,5 +65,17 @@ module WorldEvolveTests =
       let aliveNeighbourCount = Generations.getAliveNeighbourCount world 5 5 coord
       Assert.That(aliveNeighbourCount, Is.EqualTo(3))
 
+   [<TestCase(1, ExpectedResult = false)>]
+   [<TestCase(2, ExpectedResult = true)>]
+   [<TestCase(3, ExpectedResult = true)>]
+   [<TestCase(4, ExpectedResult = false)>]
+   let ``given a live current state and neighbour count newState is correct``(neighbours) =
+      Generations.newState true neighbours
 
+   [<TestCase(1, ExpectedResult = false)>]
+   [<TestCase(2, ExpectedResult = false)>]
+   [<TestCase(3, ExpectedResult = true)>]
+   [<TestCase(4, ExpectedResult = false)>]
+   let ``given a dead current state and neighbour count newState is correct``(neighbours) =
+      Generations.newState false neighbours
 
