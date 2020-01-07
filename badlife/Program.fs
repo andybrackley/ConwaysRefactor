@@ -59,11 +59,10 @@ module Generations =
         |> List.sumBy(fun _ -> + 1)
 
     let newState state neighbours = 
-        if (state && neighbours < 2) then false
-        else if (state && neighbours = 2 || neighbours = 3) then true
-        else if (state && neighbours > 3) then false
-        else if (not state && neighbours = 3) then true 
-        else state
+        match neighbours with
+        | 3 -> true
+        | 2 -> state
+        | _ -> false
 
     let evolve (world : bool array array) : unit = 
         let mutable neighbours = 0
