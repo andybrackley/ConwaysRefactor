@@ -9,4 +9,4 @@ __*__
 _____
 """
 
-    let world = Program.createWorldFromString input 
+    let world() = Program.World.createFromString input 

@@ -13,7 +13,7 @@ module WorldCreation =
             [ false; false; false; false; false ]
         ]
 
-        CollectionAssert.AreEquivalent(expected, SampleData.world)
+        CollectionAssert.AreEquivalent(expected, SampleData.world())
 
     [<Test>]
     let ``world can be retrieved as string array``() = 
@@ -25,5 +25,5 @@ module WorldCreation =
            "     "
         ]
 
-        let dump = Program.getWorldAsText SampleData.world
+        let dump = Program.World.getAsText (SampleData.world())
         CollectionAssert.AreEquivalent(expected, dump)
