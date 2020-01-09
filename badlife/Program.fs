@@ -3,36 +3,51 @@
 
 open System
 
-type CellState = Alive | Dead
-type Coordinates = { x: int; y: int }
+
+module Cell =
+    type State = Alive | Dead
+    type Coordinates = { x: int; y: int }
+    let isAlive = function | Alive -> true | Dead -> false
+
+type World = {
+    Grid: Cell.State[][]
+}
 
 module World = 
+    open Cell
+
+    let cellAt { Grid = grid } { x= x; y = y } = grid.[x].[y]
+    let asWorld grid = { Grid = grid }
+
     let createFromStringArray (lines: string[]) =
         // Assume only valid inputs for the time being.
         let charAsCellType = function | '*' -> Alive | _ -> Dead
-        lines |> Array.map(fun line -> line.ToCharArray() |> Array.map charAsCellType)
-
-    let getAsText(world: CellState [][]) =
-        let cellAsString = function
-        | Alive -> "*"
-        | Dead -> " "
-
-        world |> Array.map(
-            fun rows  -> rows |> Array.fold(fun str cell -> str + cellAsString cell) "")
+        lines 
+            |> Array.map(fun line -> line.ToCharArray() |> Array.map charAsCellType)
+            |> asWorld
 
     let createFromString (world: string) =
         let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
         createFromStringArray tokened
 
-    let copyAndUpdateWorld (world : CellState[][]) coord state = 
+    let copyAndUpdateWorld { Grid = grid } coord state = 
         let getCellState cellCoord cellValue = if cellCoord = coord then state else cellValue
 
-        world 
+        grid 
             |> Array.mapi(fun rowIndex row -> 
                 row |> Array.mapi(fun colIndex cell -> getCellState {x = rowIndex; y = colIndex} cell ))
+            |> asWorld
+
+    let getAsText { Grid = grid } =
+        let cellAsString = function
+        | Alive -> "*"
+        | Dead -> " "
+
+        grid |> Array.map(
+            fun rows  -> rows |> Array.fold(fun str cell -> str + cellAsString cell) "")
 
 module Generations = 
-    let isCellAlive = function | Alive -> true | Dead -> false
+    open Cell
 
     let neighbourOffsets = [
         {x = -1; y = -1 }; { x = -1; y = 0 }; { x = -1; y = 1 }
@@ -53,12 +68,12 @@ module Generations =
         neighbourOffsets
         |> List.map (fun coord -> { x = current.x + coord.x; y = current.y + coord.y } )
 
-    let getAliveNeighbourCount (world: CellState[][]) height width currentCoord =
+    let getAliveNeighbourCount world height width currentCoord =
         getNeighbourCoords currentCoord
         |> List.map (fun c -> sanitizeCoordinate c height width)
         |> List.distinct
-        |> List.map(fun coord -> world.[coord.x].[coord.y])
-        |> List.filter isCellAlive
+        |> List.map(fun coord -> World.cellAt world coord)
+        |> List.filter isAlive
         |> List.sumBy(fun _ -> + 1)
 
     let newState state neighbours = 
@@ -67,9 +82,9 @@ module Generations =
         | 2 -> state
         | _ -> Dead
 
-    let evolve (world : CellState[][]) = 
-        let rows = world.Length
-        let cols = world.[0].Length
+    let evolve originalWorld = 
+        let rows = originalWorld.Grid.Length
+        let cols = originalWorld.Grid.[0].Length
 
         // The current implementation keeps a total of ALL neighbours processed so far which
         // seems incorrect.  I think it should only process the immediate neighbour count to determine the new state
@@ -78,26 +93,26 @@ module Generations =
         // I've maintained consistancy with the current implementation though which makes it slightly more complicated
         // as I have to use a fold and recreate the grid each time an update occurs
 
-        let processCell (world: CellState[][]) currentCoord neighbourTally =
-            let currentState = world.[currentCoord.x].[currentCoord.y]
-            let neighbourCount = getAliveNeighbourCount world rows cols currentCoord
+        let processCell liveWorld currentCoord neighbourTally =
+            let currentState = World.cellAt liveWorld currentCoord
+            let neighbourCount = getAliveNeighbourCount liveWorld rows cols currentCoord
             let totalNeighbours = neighbourCount + neighbourTally
 
             let newState = newState currentState totalNeighbours 
             
             let newWorld = 
-                if(newState = currentState) then world
-                else World.copyAndUpdateWorld world currentCoord newState
+                if(newState = currentState) then liveWorld
+                else World.copyAndUpdateWorld liveWorld currentCoord newState
 
             (newWorld, totalNeighbours)
 
-        let worldToCoords world =
-            world 
+        let worldToCoords { Grid = grid } =
+            grid
             |> Array.mapi(fun rowIndex rows -> rows |> Array.mapi(fun colIndex _ -> { x = rowIndex; y = colIndex }))
             |> Array.collect id
 
-        worldToCoords world 
-        |> Array.fold(fun (world, neighbourTally) coord -> processCell world coord neighbourTally) (world, 0)
+        worldToCoords originalWorld 
+        |> Array.fold(fun (world, neighbourTally) coord -> processCell world coord neighbourTally) (originalWorld, 0)
         |> fst
 
 [<EntryPoint>]

@@ -4,6 +4,8 @@ open Program
 open NUnit.Framework
 
 module WorldCreation = 
+    open Cell
+
     [<Test>]
     let ``Given the sample input the world is created as expected`` () =
         let expected = [
@@ -14,7 +16,7 @@ module WorldCreation =
             [ Dead; Dead; Dead; Dead; Dead ]
         ]
 
-        CollectionAssert.AreEquivalent(expected, SampleData.world())
+        CollectionAssert.AreEquivalent(expected, SampleData.world().Grid)
 
     [<Test>]
     let ``world can be retrieved as string array``() = 
@@ -43,5 +45,5 @@ module WorldCreation =
         ]
 
         let newWorld = World.copyAndUpdateWorld world { x = 0; y = 4; } Alive
-        CollectionAssert.AreEquivalent(expected, newWorld)
+        CollectionAssert.AreEquivalent(expected, newWorld.Grid)
 
