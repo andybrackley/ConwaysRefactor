@@ -16,7 +16,7 @@ module WorldCreation =
             [ Dead; Dead; Dead; Dead; Dead ]
         ]
 
-        CollectionAssert.AreEquivalent(expected, SampleData.world().Grid)
+        CollectionAssert.AreEquivalent(expected, SampleData.world() |> World.getAs2dArray)
 
     [<Test>]
     let ``world can be retrieved as string array``() = 

@@ -4,78 +4,115 @@
 open System
 
 module Cell =
+    type Row = Row of int
+    type Col = Col of int
+
+    let rowAsInt(Row r) = r
+    let colAsInt(Col c) = c
+
     type State = Alive | Dead
-    type Coordinates = { x: int; y: int }
+    type Coordinates = { x: Row; y: Col }
     let isAlive = function | Alive -> true | Dead -> false
 
 type World = {
-    Grid: Cell.State[][]
+    LastRow : Cell.Row
+    LastCol : Cell.Col
+    LiveCells : Set<Cell.Coordinates>
 }
 
 module World = 
     open Cell
 
-    let cellAt { Grid = grid } { x= x; y = y } = grid.[x].[y]
-    let asWorld grid = { Grid = grid }
-
+    let cellAt world coordinate = 
+        if world.LiveCells |> Set.contains coordinate then Alive else Dead
+    
     let createFromStringArray (lines: string[]) =
+        let rowCount = lines.Length - 1
+        let colCount = lines |> Seq.tryHead |> Option.map(fun line -> (line |> Seq.length) - 1) |> Option.defaultValue 0
+
         // Assume only valid inputs for the time being.
         let charAsCellType = function | '*' -> Alive | _ -> Dead
-        lines 
-            |> Array.map(fun line -> line.ToCharArray() |> Array.map charAsCellType)
-            |> asWorld
+        let liveCells = 
+            lines |>
+                Seq.mapi(fun row line -> 
+                    line |> Seq.mapi(fun col ch -> { x = Row(row); y = Col(col) }, charAsCellType ch ))
+            |> Seq.concat
+            |> Seq.filter(fun (_, state) -> Cell.isAlive state)
+            |> Seq.map fst
+            |> Set.ofSeq
+
+        { 
+            LastRow = Row(rowCount)
+            LastCol = Col(colCount)
+            LiveCells = liveCells 
+        }
+            
 
     let createFromString (world: string) =
         let tokened = world.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
         createFromStringArray tokened
 
-    let getAsText { Grid = grid } =
+    let getCells world row = 
+        let (Col lastCol) = world.LastCol
+        seq {
+            for col in 0 .. lastCol do 
+                let coord = { x = row; y = Col(col) }
+                yield coord, cellAt world coord 
+        }
+
+    let getRows world =
+        let (Row lastRow) = world.LastRow
+        [ 0 .. lastRow ] |> Seq.map(fun row -> Row(row))
+
+
+    let getAsText world =
         let cellAsString = function
-        | Alive -> "*"
-        | Dead -> " "
+        | Alive -> '*'
+        | Dead -> ' '
 
-        grid |> Array.map(
-            fun rows  -> rows |> Array.fold(fun str cell -> str + cellAsString cell) "")
+        let lines = 
+            getRows world
+            |> Seq.map(fun row -> 
+                let cells = getCells world row
+                cells |> Seq.map(fun (_, cell) -> cellAsString cell)
+                      |> Seq.fold(fun lineStr ch -> lineStr + string(ch)) "")
+        lines
 
-    // Iterates the 2d array and allows a mapping function to be supplied for each cell
-    // The mapper will receive a tuple of the Coordinate and the current state and is expected to return a new state
-    let mapEachCell (mapper: Coordinates * Cell.State -> Cell.State) { Grid = grid } = 
-        grid 
-          |> Array.mapi(fun rowIndex row -> 
-            row |> Array.mapi(fun colIndex col -> 
-                ( { x = rowIndex; y = colIndex }, grid.[rowIndex].[colIndex] ))
-                |> Array.map mapper
-          )
+    let getAs2dArray world =
+        getRows world
+        |> Seq.map(fun row -> 
+            let cells = getCells world row
+            cells |> Seq.map snd)
+
 
 module Generations = 
     open Cell
 
-    let neighbourOffsets = [
-        {x = -1; y = -1 }; { x = -1; y = 0 }; { x = -1; y = 1 }
-        {x = 0; y = -1 }; { x = 0; y = 1 }
-        {x = 1; y = -1 }; { x = 1; y = 0 }; { x = 1; y = 1 }    
-    ]
+    let getNeighbourCoords world (coord : Coordinates) = 
+        let getBounds currentPos maxPos = 
+            let lower = if currentPos = 0 then maxPos else currentPos - 1 
+            let upper = if currentPos = maxPos then 0 else currentPos + 1 
+            (lower, upper)
 
-    let sanitizeCoordinate coordinate height width =
-        let bound v max = 
-            match v with
-            | v when v < 0 -> max - 1
-            | v when v >= max -> 0 
-            | v -> v
+        let getRowBounds(Row currentRow) (Row lastRow) = getBounds currentRow lastRow
+        let getColBounds(Col currentCol) (Col lastCol) = getBounds currentCol lastCol
 
-        { x =  bound coordinate.x height; y = bound coordinate.y width }
+        let (topRow, bottomRow) = getRowBounds coord.x world.LastRow
+        let (leftCol, rightCol) = getColBounds coord.y world.LastCol
 
-    let getNeighbourCoords (current: Coordinates) = 
-        neighbourOffsets
-        |> List.map (fun coord -> { x = current.x + coord.x; y = current.y + coord.y } )
+        [
+            { x = Row(topRow); y = Col(leftCol) } 
+            { x = Row(topRow); y = coord.y }
+            { x = Row(topRow); y = Col(rightCol) } 
 
-    let getAliveNeighbourCount world height width currentCoord =
-        getNeighbourCoords currentCoord
-        |> List.map (fun c -> sanitizeCoordinate c height width)
-        |> List.distinct
-        |> List.map(fun coord -> World.cellAt world coord)
-        |> List.filter isAlive
-        |> List.sumBy(fun _ -> + 1)
+            { x = coord.x; y = Col(leftCol) } 
+            { x = coord.x; y = Col(rightCol) } 
+
+            { x = Row(bottomRow); y = Col(leftCol) } 
+            { x = Row(bottomRow); y = coord.y }
+            { x = Row(bottomRow); y = Col(rightCol) } 
+        ] |> Seq.distinct
+
 
     let newState state neighbours = 
         match neighbours with
@@ -83,17 +120,32 @@ module Generations =
         | 2 -> state
         | _ -> Dead
 
-    let evolve originalWorld = 
-        let rows = originalWorld.Grid.Length
-        let cols = originalWorld.Grid.[0].Length
+    let cellsToProcess world =
+        world.LiveCells 
+            |> Seq.collect (getNeighbourCoords world)
+            |> Set.ofSeq
 
-        let getCellNewState currentCoord currentState =
-            let neighbourCount = getAliveNeighbourCount originalWorld rows cols currentCoord
-            newState currentState neighbourCount
+    let getAliveNeighbourCount world coord = 
+        getNeighbourCoords world coord
+        |> Seq.filter(fun c -> World.cellAt world c |> isAlive)
+        |> Seq.length
 
-        originalWorld
-        |> World.mapEachCell (fun (coord, cell) -> getCellNewState coord cell)
-        |> World.asWorld
+    let evolveWorld world =
+        // Get all cells to process
+        let cellsToProcess = cellsToProcess world |> Seq.toArray
+
+        // foreach neighbouring cell calculate state
+        let evolved = 
+            cellsToProcess 
+                |> Seq.map(fun coord -> 
+                    let aliveNeighbours = getAliveNeighbourCount world coord
+                    let currentState = World.cellAt world coord
+                    (coord, newState currentState aliveNeighbours))
+                |> Seq.filter(fun (_, state) -> Cell.isAlive state)
+                |> Seq.map fst
+                |> Set.ofSeq
+
+        { world with LiveCells = evolved }
 
 [<EntryPoint>]
 let main argv =
@@ -101,10 +153,9 @@ let main argv =
     let all_text = input.ReadToEnd()
     let world = World.createFromString all_text
 
-    let newWorld = Generations.evolve world
+    let newWorld = Generations.evolveWorld world
 
     World.getAsText newWorld
-        |> Array.iter(fun l -> printfn "%s" l)
+        |> Seq.iter(fun l -> printfn "%s" l)
 
-            
-    42 // return an integer exit code
+    0 // return an integer exit code
